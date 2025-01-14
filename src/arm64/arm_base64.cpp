@@ -49,9 +49,9 @@ size_t encode_base64(char *dst, const char *src, size_t srclen,
   // When trying to load a uint8_t array, Visual Studio might
   // error with: error C2664: '__n128x4 neon_ld4m_q8(const char *)':
   // cannot convert argument 1 from 'const uint8_t [64]' to 'const char *
-  const uint8x16x4_t table =
-      vld4q_u8((reinterpret_cast<const char *>(
-        options & base64_url) ? source_table_url : source_table));
+  const uint8x16x4_t table = vld4q_u8(
+      (reinterpret_cast<const char *>(options & base64_url) ? source_table_url
+                                                            : source_table));
 #else
   const uint8x16x4_t table =
       vld4q_u8((options & base64_url) ? source_table_url : source_table);
@@ -144,16 +144,20 @@ template <bool base64_url> uint64_t to_base64_mask(block64 *b, bool *error) {
 #ifdef SIMDUTF_REGULAR_VISUAL_STUDIO
   if (base64_url) {
     lut_lo =
-        simdutf_make_uint8x16_t(0x3a,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x61,0xe1,0xf4,0xe5,0xa5,0xf4,0xf4);
+        simdutf_make_uint8x16_t(0x3a, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70,
+                                0x70, 0x61, 0xe1, 0xf4, 0xe5, 0xa5, 0xf4, 0xf4);
   } else {
     lut_lo =
-        simdutf_make_uint8x16_t(0x3a,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x61,0xe1,0xb4,0xe5,0xe5,0xf4,0xb4);
+        simdutf_make_uint8x16_t(0x3a, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70,
+                                0x70, 0x61, 0xe1, 0xb4, 0xe5, 0xe5, 0xf4, 0xb4);
   }
 #else
   if (base64_url) {
-    lut_lo = uint8x16_t{0x3a,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x61,0xe1,0xf4,0xe5,0xa5,0xf4,0xf4};
+    lut_lo = uint8x16_t{0x3a, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70,
+                        0x70, 0x61, 0xe1, 0xf4, 0xe5, 0xa5, 0xf4, 0xf4};
   } else {
-    lut_lo = uint8x16_t{0x3a,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x70,0x61,0xe1,0xb4,0xe5,0xe5,0xf4,0xb4};
+    lut_lo = uint8x16_t{0x3a, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70,
+                        0x70, 0x61, 0xe1, 0xb4, 0xe5, 0xe5, 0xf4, 0xb4};
   }
 #endif
   uint8x16_t lo0 = vqtbl1q_u8(lut_lo, lo_nibbles0);
@@ -174,10 +178,10 @@ template <bool base64_url> uint64_t to_base64_mask(block64 *b, bool *error) {
 #else
   if (base64_url) {
     lut_hi = uint8x16_t{0x11, 0x20, 0x42, 0x80, 0x8,  0x4,  0x8,  0x4,
-              0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
+                        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
   } else {
     lut_hi = uint8x16_t{0x11, 0x20, 0x42, 0x80, 0x8,  0x4,  0x8,  0x4,
-              0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
+                        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
   }
 #endif
   uint8x16_t hi0 = vqtbl1q_u8(lut_hi, hi_nibbles0);
@@ -236,10 +240,10 @@ template <bool base64_url> uint64_t to_base64_mask(block64 *b, bool *error) {
 #else
   if (base64_url) {
     roll_lut = uint8x16_t{0xe0, 0x11, 0x13, 0x4, 0xbf, 0xbf, 0xb9, 0xb9,
-                0x0,  0x0,  0x0,  0x0, 0x0,  0x0,  0x0,  0x0};
+                          0x0,  0x0,  0x0,  0x0, 0x0,  0x0,  0x0,  0x0};
   } else {
     roll_lut = uint8x16_t{0x0, 0x10, 0x13, 0x4, 0xbf, 0xbf, 0xb9, 0xb9,
-                0x0, 0x0,  0x0,  0x0, 0x0,  0x0,  0x0,  0x0};
+                          0x0, 0x0,  0x0,  0x0, 0x0,  0x0,  0x0,  0x0};
   }
 #endif
   uint8x16_t vsecond_last = base64_url ? vdupq_n_u8(0x2d) : vdupq_n_u8(0x2f);
@@ -282,8 +286,8 @@ uint64_t compress_block(block64 *b, uint64_t mask, char *output) {
   return offsets >> 56;
 }
 
-// The caller of this function is responsible to ensure that there are 64 bytes available
-// from reading at src. The data is read into a block64 structure.
+// The caller of this function is responsible to ensure that there are 64 bytes
+// available from reading at src. The data is read into a block64 structure.
 void load_block(block64 *b, const char *src) {
   b->chunks[0] = vld1q_u8(reinterpret_cast<const uint8_t *>(src));
   b->chunks[1] = vld1q_u8(reinterpret_cast<const uint8_t *>(src) + 16);
@@ -291,16 +295,17 @@ void load_block(block64 *b, const char *src) {
   b->chunks[3] = vld1q_u8(reinterpret_cast<const uint8_t *>(src) + 48);
 }
 
-// The caller of this function is responsible to ensure that there are 32 bytes available
-// from reading at data. It returns a 16-byte value, narrowing with saturation the 16-bit words.
+// The caller of this function is responsible to ensure that there are 32 bytes
+// available from reading at data. It returns a 16-byte value, narrowing with
+// saturation the 16-bit words.
 inline uint8x16_t load_satured(const uint16_t *data) {
   uint16x8_t in1 = vld1q_u16(data);
   uint16x8_t in2 = vld1q_u16(data + 8);
   return vqmovn_high_u16(vqmovn_u16(in1), in2);
 }
 
-// The caller of this function is responsible to ensure that there are 128 bytes available
-// from reading at src. The data is read into a block64 structure.
+// The caller of this function is responsible to ensure that there are 128 bytes
+// available from reading at src. The data is read into a block64 structure.
 void load_block(block64 *b, const char16_t *src) {
   b->chunks[0] = load_satured(reinterpret_cast<const uint16_t *>(src));
   b->chunks[1] = load_satured(reinterpret_cast<const uint16_t *>(src) + 16);
@@ -320,14 +325,18 @@ void base64_decode_block(char *out, const char *src) {
   vst3q_u8((uint8_t *)out, outvec);
 }
 
-template <bool base64_url, typename char_type>
-result compress_decode_base64(char *dst, const char_type *src, size_t srclen,
-                              base64_options options) {
+template <bool base64_url, bool ignore_garbage, typename char_type>
+full_result
+compress_decode_base64(char *dst, const char_type *src, size_t srclen,
+                       base64_options options,
+                       last_chunk_handling_options last_chunk_options) {
   const uint8_t *to_base64 = base64_url ? tables::base64::to_base64_url_value
                                         : tables::base64::to_base64_value;
-  size_t equallocation = srclen; // location of the first padding character if any
+  size_t equallocation =
+      srclen; // location of the first padding character if any
   // skip trailing spaces
-  while (srclen > 0 && scalar::base64::is_eight_byte(src[srclen - 1]) && to_base64[uint8_t(src[srclen - 1])] == 64) {
+  while (srclen > 0 && scalar::base64::is_eight_byte(src[srclen - 1]) &&
+         to_base64[uint8_t(src[srclen - 1])] == 64) {
     srclen--;
   }
   size_t equalsigns = 0;
@@ -336,7 +345,8 @@ result compress_decode_base64(char *dst, const char_type *src, size_t srclen,
     srclen--;
     equalsigns = 1;
     // skip trailing spaces
-    while (srclen > 0 && scalar::base64::is_eight_byte(src[srclen - 1]) && to_base64[uint8_t(src[srclen - 1])] == 64) {
+    while (srclen > 0 && scalar::base64::is_eight_byte(src[srclen - 1]) &&
+           to_base64[uint8_t(src[srclen - 1])] == 64) {
       srclen--;
     }
     if (srclen > 0 && src[srclen - 1] == '=') {
@@ -344,6 +354,18 @@ result compress_decode_base64(char *dst, const char_type *src, size_t srclen,
       srclen--;
       equalsigns = 2;
     }
+  }
+  if (srclen == 0) {
+    if (!ignore_garbage && equalsigns > 0) {
+      if (last_chunk_options == last_chunk_handling_options::strict) {
+        return {BASE64_INPUT_REMAINDER, 0, 0};
+      } else if (last_chunk_options ==
+                 last_chunk_handling_options::stop_before_partial) {
+        return {SUCCESS, 0, 0};
+      }
+      return {INVALID_BASE64_CHARACTER, equallocation, 0};
+    }
+    return {SUCCESS, 0, 0};
   }
   const char_type *const srcinit = src;
   const char *const dstinit = dst;
@@ -360,16 +382,18 @@ result compress_decode_base64(char *dst, const char_type *src, size_t srclen,
       src += 64;
       bool error = false;
       uint64_t badcharmask = to_base64_mask<base64_url>(&b, &error);
-      if(badcharmask){
-        if (error) {
+      if (badcharmask) {
+        if (error && !ignore_garbage) {
           src -= 64;
-          while (src < srcend && scalar::base64::is_eight_byte(*src) && to_base64[uint8_t(*src)] <= 64) {
+          while (src < srcend && scalar::base64::is_eight_byte(*src) &&
+                 to_base64[uint8_t(*src)] <= 64) {
             src++;
           }
-          if(src < srcend){
+          if (src < srcend) {
             // should never happen
           }
-          return {error_code::INVALID_BASE64_CHARACTER, size_t(src - srcinit)};
+          return {error_code::INVALID_BASE64_CHARACTER, size_t(src - srcinit),
+                  size_t(dst - dstinit)};
         }
       }
 
@@ -403,8 +427,10 @@ result compress_decode_base64(char *dst, const char_type *src, size_t srclen,
     while ((bufferptr - buffer_start) % 64 != 0 && src < srcend) {
       uint8_t val = to_base64[uint8_t(*src)];
       *bufferptr = char(val);
-      if (!scalar::base64::is_eight_byte(*src) || val > 64) {
-        return {error_code::INVALID_BASE64_CHARACTER, size_t(src - srcinit)};
+      if ((!scalar::base64::is_eight_byte(*src) || val > 64) &&
+          !ignore_garbage) {
+        return {error_code::INVALID_BASE64_CHARACTER, size_t(src - srcinit),
+                size_t(dst - dstinit)};
       }
       bufferptr += (val <= 63);
       src++;
@@ -441,72 +467,48 @@ result compress_decode_base64(char *dst, const char_type *src, size_t srclen,
       buffer_start += 4;
     }
     // we may have 1, 2 or 3 bytes left and we need to decode them so let us
-    // bring in src content
+    // backtrack
     int leftover = int(bufferptr - buffer_start);
-    if (leftover > 0) {
-      while (leftover < 4 && src < srcend) {
-        uint8_t val = to_base64[uint8_t(*src)];
-        if (!scalar::base64::is_eight_byte(*src) || val > 64) {
-          return {error_code::INVALID_BASE64_CHARACTER, size_t(src - srcinit)};
+    while (leftover > 0) {
+      if (!ignore_garbage) {
+        while (to_base64[uint8_t(*(src - 1))] == 64) {
+          src--;
         }
-        buffer_start[leftover] = char(val);
-        leftover += (val <= 63);
-        src++;
-      }
-
-      if (leftover == 1) {
-        return {BASE64_INPUT_REMAINDER, size_t(dst - dstinit)};
-      }
-      if (leftover == 2) {
-        uint32_t triple = (uint32_t(buffer_start[0]) << 3 * 6) +
-                          (uint32_t(buffer_start[1]) << 2 * 6);
-        triple = scalar::utf32::swap_bytes(triple);
-        triple >>= 8;
-        std::memcpy(dst, &triple, 1);
-        dst += 1;
-      } else if (leftover == 3) {
-        uint32_t triple = (uint32_t(buffer_start[0]) << 3 * 6) +
-                          (uint32_t(buffer_start[1]) << 2 * 6) +
-                          (uint32_t(buffer_start[2]) << 1 * 6);
-        triple = scalar::utf32::swap_bytes(triple);
-        triple >>= 8;
-
-        std::memcpy(dst, &triple, 2);
-        dst += 2;
       } else {
-        uint32_t triple = ((uint32_t(uint8_t(buffer_start[0])) << 3 * 6) +
-                           (uint32_t(uint8_t(buffer_start[1])) << 2 * 6) +
-                           (uint32_t(uint8_t(buffer_start[2])) << 1 * 6) +
-                           (uint32_t(uint8_t(buffer_start[3])) << 0 * 6))
-                          << 8;
-        triple = scalar::utf32::swap_bytes(triple);
-        std::memcpy(dst, &triple, 3);
-        dst += 3;
+        while (to_base64[uint8_t(*(src - 1))] >= 64) {
+          src--;
+        }
       }
+      src--;
+      leftover--;
     }
   }
   if (src < srcend + equalsigns) {
-    result r =
-        scalar::base64::base64_tail_decode(dst, src, srcend - src, options);
-    if (r.error == error_code::INVALID_BASE64_CHARACTER) {
-      r.count += size_t(src - srcinit);
+    full_result r = scalar::base64::base64_tail_decode(
+        dst, src, srcend - src, equalsigns, options, last_chunk_options);
+    r.input_count += size_t(src - srcinit);
+    if (r.error == error_code::INVALID_BASE64_CHARACTER ||
+        r.error == error_code::BASE64_EXTRA_BITS) {
       return r;
     } else {
-      r.count += size_t(dst - dstinit);
+      r.output_count += size_t(dst - dstinit);
     }
-    if(r.error == error_code::SUCCESS && equalsigns > 0) {
+    if (last_chunk_options != stop_before_partial &&
+        r.error == error_code::SUCCESS && equalsigns > 0 && !ignore_garbage) {
       // additional checks
-      if((r.count % 3 == 0) || ((r.count % 3) + 1 + equalsigns != 4)) {
+      if ((r.output_count % 3 == 0) ||
+          ((r.output_count % 3) + 1 + equalsigns != 4)) {
         r.error = error_code::INVALID_BASE64_CHARACTER;
-        r.count = equallocation;
+        r.input_count = equallocation;
       }
     }
     return r;
   }
-  if(equalsigns > 0) {
-    if((size_t(dst - dstinit) % 3 == 0) || ((size_t(dst - dstinit) % 3) + 1 + equalsigns != 4)) {
-      return {INVALID_BASE64_CHARACTER, equallocation};
+  if (equalsigns > 0 && !ignore_garbage) {
+    if ((size_t(dst - dstinit) % 3 == 0) ||
+        ((size_t(dst - dstinit) % 3) + 1 + equalsigns != 4)) {
+      return {INVALID_BASE64_CHARACTER, equallocation, size_t(dst - dstinit)};
     }
   }
-  return {SUCCESS, size_t(dst - dstinit)};
+  return {SUCCESS, srclen, size_t(dst - dstinit)};
 }

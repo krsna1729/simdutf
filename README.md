@@ -1,3 +1,7 @@
+
+simdutf: Unicode validation and transcoding at billions of characters per second
+===============================================
+
 [![Alpine Linux](https://github.com/simdutf/simdutf/actions/workflows/alpine.yml/badge.svg)](https://github.com/simdutf/simdutf/actions/workflows/alpine.yml)
 [![MSYS2-CI](https://github.com/simdutf/simdutf/actions/workflows/msys2.yml/badge.svg)](https://github.com/simdutf/simdutf/actions/workflows/msys2.yml)
 [![MSYS2-CLANG-CI](https://github.com/simdutf/simdutf/actions/workflows/msys2-clang.yml/badge.svg)](https://github.com/simdutf/simdutf/actions/workflows/msys2-clang.yml)
@@ -12,6 +16,7 @@
   - [Usage (Usage)](#usage-usage)
   - [Usage (CMake)](#usage-cmake)
   - [Single-header version](#single-header-version)
+  - [Packages](#packages)
   - [Example](#example)
   - [API](#api)
   - [Base64](#base64)
@@ -21,8 +26,6 @@
   - [References](#references)
   - [License](#license)
 
-simdutf: Unicode validation and transcoding at billions of characters per second
-===============================================
 
 Most modern software relies on the [Unicode standard](https://en.wikipedia.org/wiki/Unicode).
 In memory, Unicode strings are represented using either
@@ -58,7 +61,7 @@ This library provide fast Unicode functions such as
 - [WHATWG forgiving-base64](https://infra.spec.whatwg.org/#forgiving-base64-decode) (with or without URL encoding) to binary,
 - Binary to base64 (with or without URL encoding).
 
-The functions are accelerated using SIMD instructions (e.g., ARM NEON, SSE, AVX, AVX-512, RISC-V Vector Extension, etc.). When your strings contain hundreds of characters, we can often transcode them at speeds exceeding a billion characters per second. You should expect high speeds not only with English strings (ASCII) but also Chinese, Japanese, Arabic, and so forth. We handle the full character range (including, for example, emojis).
+The functions are accelerated using SIMD instructions (e.g., ARM NEON, SSE, AVX, AVX-512, RISC-V Vector Extension, LoongSon, etc.). When your strings contain hundreds of characters, we can often transcode them at speeds exceeding a billion characters per second. You should expect high speeds not only with English strings (ASCII) but also Chinese, Japanese, Arabic, and so forth. We handle the full character range (including, for example, emojis).
 
 The library compiles down to a small library of a few hundred kilobytes. Our functions are exception-free and non allocating. We have extensive tests and extensive benchmarks.
 
@@ -72,10 +75,13 @@ The simdutf library is used by:
 - [Node.js](https://nodejs.org/en/) (19.4.0 or better, 20.0 or better, 18.15 or better), a standard JavaScript runtime environment,
 - [Bun](https://bun.sh), a fast JavaScript runtime environment,
 - [WebKit](https://github.com/WebKit/WebKit/pull/9990), the Web engine behind the Safari browser (iOS, macOS),
+- [Chromium](https://chromium-review.googlesource.com/c/chromium/src/+/6054817), the Web engine behind the Google Chrome, Microsoft Edge and Brave,
 - [StarRocks](https://www.starrocks.io), an Open-Source, High-Performance Analytical Database,
 - [Oracle GraalVM JavaScript](https://github.com/oracle/graaljs), a JavaScript implementation by Oracle,
 - [Couchbase](https://www.couchbase.com), a popular database system,
 - [Ladybird](https://ladybird.org), an independent Web browser,
+- [StarRocks](https://www.starrocks.io), a High-Performance Analytical Database,
+- [Cloudflare workerd](https://github.com/cloudflare/workerd), a JavaScript/Wasm Runtime,
 - [haskell/text](https://github.com/haskell/text), a library for fast operations over Unicode text,
 - [klogg](https://github.com/variar/klogg), a Really fast log explorer,
 - [Pixie](https://github.com/pixie-io/pixie), observability tool for Kubernetes applications.
@@ -120,11 +126,12 @@ Please refer to our benchmarking tool for a proper interpretation of the numbers
 Requirements
 -------
 
-- C++11 compatible compiler. We support LLVM clang, GCC, Visual Studio. (Our optional benchmark tool requires C++17.)
-- For high speed, you should have a recent 64-bit system (e.g., ARM or x64).
-- If you rely on CMake, you should use a recent CMake (at least 3.15) ; otherwise you may use the [single header version](#single-header-version). The library is also available from Microsoft's vcpkg.
-- AVX-512 support require a processor with AVX512-VBMI2 (Ice Lake or better) and a recent compiler (GCC 8 or better, Visual Studio 2022 or better, LLVM clang 6 or better). You need a correspondingly recent assembler such as gas (2.30+) or nasm (2.14+): recent compilers usually come with recent assemblers. If you mix a recent compiler with an incompatible/old assembler (e.g., when using a recent compiler with an old Linux distribution), you may get errors at build time because the compiler produces instructions that the assembler does not recognize: you should update your assembler to match your compiler (e.g., upgrade binutils to version 2.30 or better under Linux) or use an older compiler matching the capabilities of your assembler.
+- C++11 compatible compiler. We support LLVM clang, GCC, Visual Studio. (Our tests and benchmark tools requires C++17.)
+- For high speed, you should have a recent 64-bit system (e.g., ARM, x64, RISC-V with vector extensions, Loongson).
+- If you rely on CMake, you should use a recent CMake (at least 3.15); otherwise you may use the [single header version](#single-header-version). The library is also available from [Microsoft's vcpkg](https://github.com/simdutf/simdutf-vcpkg), from [conan](https://conan.io/center/recipes/simdutf), from [FreeBSD's port](https://cgit.freebsd.org/ports/tree/converters/simdutf), from [brew](https://formulae.brew.sh/formula/simdutf), and many other systems.
+- AVX-512 support require a processor with AVX512-VBMI2 (Ice Lake or better, AMD Zen 4 or better) and a recent compiler (GCC 8 or better, Visual Studio 2022 or better, LLVM clang 6 or better). You need a correspondingly recent assembler such as gas (2.30+) or nasm (2.14+): recent compilers usually come with recent assemblers. If you mix a recent compiler with an incompatible/old assembler (e.g., when using a recent compiler with an old Linux distribution), you may get errors at build time because the compiler produces instructions that the assembler does not recognize: you should update your assembler to match your compiler (e.g., upgrade binutils to version 2.30 or better under Linux) or use an older compiler matching the capabilities of your assembler.
 - To benefit from RISC-V Vector Extensions on RISC-V systems, you should compile specifically for the desired architecture. E.g., add `-march=rv64gcv` as a compiler flag when using a version of GCC or LLVM which supports these extensions (such as GCC 14 or better). The command `CXXFLAGS=-march=rv64gcv cmake -B build` may suffice.
+- We recommend that Visual Studio users compile with LLVM (ClangCL). Using LLVM as a front-end inside Visual Studio provides faster release builds and better runtime performance.
 
 Usage (Usage)
 -------
@@ -143,9 +150,10 @@ Linux or macOS users might follow the following instructions if they have a rece
 
 1. Pull the library in a directory
    ```
-   wget https://github.com/simdutf/simdutf/releases/download/v5.5.0/singleheader.zip
+   wget https://github.com/simdutf/simdutf/releases/download/v6.0.3/singleheader.zip
    unzip singleheader.zip
    ```
+   You can replace `wget` by `curl -OL https://...` if you prefer.
 2. Compile
    ```
    c++ -std=c++17 -o amalgamation_demo amalgamation_demo.cpp
@@ -173,16 +181,25 @@ ctest .
 
 Visual Studio users must specify whether they want to build the Release or Debug version.
 
-To run benchmarks, execute the `benchmark` command. You can get help on its
+To run transcoding benchmarks, execute the `benchmark` command. You can get help on its
 usage by first building it and then calling it with the `--help` flag.
 E.g., under Linux you may do the following:
 
 ```
-cmake -B build
+cmake -B build -D SIMDUTF_BENCHMARKS=ON
 cmake --build build
 ./build/benchmarks/benchmark --help
 ./build/benchmarks/base64/base64_benchmark --help
 ```
+
+E.g., to run base64 decoding benchmarks on DNS data (short inputs), do
+
+```
+./build/benchmarks/base64/benchmark_base64 -d pathto/base64data/dns/*.txt
+```
+
+where pathto/base64data should contain the path to a clone of
+the repository https://github.com/lemire/base64data.
 
 Instructions are similar for Visual Studio users.
 
@@ -195,13 +212,16 @@ sure you have ICU installed on your machine and that cmake can find it. For macO
 install it with brew using `brew install icu4c`. If you have ICU on your system but cmake cannot
 find it, you may need to provide cmake with a path to ICU, such as `ICU_ROOT=/usr/local/opt/icu4c cmake -B build`.
 
+You may also use a package manager. E.g.,  [we have a complete example using vcpkg](https://github.com/simdutf/simdutf-vcpkg).
+
+
 Single-header version
 ----------------------
 
 You can create a single-header version of the library where
 all of the code is put into two files (`simdutf.h` and `simdutf.cpp`).
 We publish a zip archive containing these files, e.g., see
-https://github.com/simdutf/simdutf/releases/download/v5.5.0/singleheader.zip
+https://github.com/simdutf/simdutf/releases/download/v6.0.3/singleheader.zip
 
 You may generate it on your own using a Python script.
 
@@ -218,6 +238,12 @@ cd singleheader
 c++ -o amalgamation_demo amalgamation_demo.cpp -std=c++17
 ./amalgamation_demo
 ```
+
+Packages
+------
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/simdutf.svg)](https://repology.org/project/simdutf/versions)
+
 
 Example
 ---------
@@ -293,6 +319,25 @@ In generic terms, we refer to `char`, `char16_t`,  and `char32_t` as *code units
 Our functions and declarations are all in the `simdutf` namespace. Thus you should prefix our functions
 and types with `simdutf::` as required.
 
+If using C++20, all functions which take a pointer and a size (which is almost all of them)
+also have a span overload. Here is an example:
+
+```cpp
+std::vector<char> data{1, 2, 3, 4, 5};
+// C++11 API
+auto cpp11 = simdutf::autodetect_encoding(data.data(), data.size());
+// C++20 API
+auto cpp20 = simdutf::autodetect_encoding(data);
+```
+
+The span overloads use std::span for UTF-16 and UTF-32. For latin1, UTF-8,
+"binary" (used by the base64 functions) anything that has a `.size()` and
+`.data()` that returns a pointer to a byte-like type will be accepted as a
+span. This makes it possible to directly pass std::string, std::string_view,
+std::vector, std::array and std::span to the functions. The reason for allowing
+all byte-like types in the api (as opposed to only `std::span<char>`) is to
+make it easy to interface with whatever data the user may have, without having
+to resort to casting.
 
 We have basic functions to detect the type of an input. They return an integer defined by
 the following `enum`.
@@ -303,7 +348,7 @@ enum encoding_type {
         UTF16_LE = 2,   // BOM 0xff 0xfe
         UTF16_BE = 4,   // BOM 0xfe 0xff
         UTF32_LE = 8,   // BOM 0xff 0xfe 0x00 0x00
-        UTF32_BE = 16,   // BOM 0x00 0x00 0xfe 0xff
+        UTF32_BE = 16,  // BOM 0x00 0x00 0xfe 0xff
 
         unspecified = 0
 };
@@ -321,7 +366,7 @@ enum encoding_type {
  * @param length the length of the string in bytes.
  * @return the detected encoding type
  */
-simdutf_warn_unused simdutf::encoding_type autodetect_encoding(const char * input, size_t length) noexcept;
+simdutf_warn_unused simdutf::encoding_type autodetect_encoding(const char *input, size_t length) noexcept;
 
 /**
  * Autodetect the possible encodings of the input in one pass.
@@ -334,7 +379,7 @@ simdutf_warn_unused simdutf::encoding_type autodetect_encoding(const char * inpu
  * @param length the length of the string in bytes.
  * @return the detected encoding type
  */
-simdutf_warn_unused int detect_encodings(const char * input, size_t length) noexcept;
+simdutf_warn_unused int detect_encodings(const char *input, size_t length) noexcept;
 ```
 
 
@@ -352,17 +397,30 @@ We report six types of errors related to Latin1, UTF-8, UTF-16 and UTF-32 encodi
 ```cpp
 enum error_code {
   SUCCESS = 0,
-  HEADER_BITS,  // Any byte must have fewer than 5 header bits.
-  TOO_SHORT,    // The leading byte must be followed by N-1 continuation bytes, where N is the UTF-8 character length
-                // This is also the error when the input is truncated.
-  TOO_LONG,     // We either have too many consecutive continuation bytes or the string starts with a continuation byte.
-  OVERLONG,     // The decoded character must be above U+7F for two-byte characters, U+7FF for three-byte characters,
-                // and U+FFFF for four-byte characters.
-  TOO_LARGE,    // The decoded character must be less than or equal to U+10FFFF,less than or equal than U+7F for ASCII OR less than equal than U+FF for Latin1
-  SURROGATE,    // The decoded character must not be in U+D800...DFFF (UTF-8 or UTF-32) OR
-                // a high surrogate must be followed by a low surrogate and a low surrogate must be preceded by a high surrogate (UTF-16) OR
-                // there must be no surrogate at all (Latin1)
-  OTHER         // Not related to validation/transcoding.
+  HEADER_BITS, // Any byte must have fewer than 5 header bits.
+  TOO_SHORT,   // The leading byte must be followed by N-1 continuation bytes,
+               // where N is the UTF-8 character length This is also the error
+               // when the input is truncated.
+  TOO_LONG,    // We either have too many consecutive continuation bytes or the
+               // string starts with a continuation byte.
+  OVERLONG, // The decoded character must be above U+7F for two-byte characters,
+            // U+7FF for three-byte characters, and U+FFFF for four-byte
+            // characters.
+  TOO_LARGE, // The decoded character must be less than or equal to
+             // U+10FFFF,less than or equal than U+7F for ASCII OR less than
+             // equal than U+FF for Latin1
+  SURROGATE, // The decoded character must be not be in U+D800...DFFF (UTF-8 or
+             // UTF-32) OR a high surrogate must be followed by a low surrogate
+             // and a low surrogate must be preceded by a high surrogate
+             // (UTF-16) OR there must be no surrogate at all (Latin1)
+  INVALID_BASE64_CHARACTER, // Found a character that cannot be part of a valid
+                            // base64 string. This may include a misplaced padding character ('=').
+  BASE64_INPUT_REMAINDER,   // The base64 input terminates with a single
+                            // character, excluding padding (=).
+  BASE64_EXTRA_BITS,        // The base64 input terminates with non-zero
+                            // padding bits.
+  OUTPUT_BUFFER_TOO_SMALL,  // The provided buffer is too small.
+  OTHER                     // Not related to validation/transcoding.
 };
 
 ```
@@ -422,7 +480,7 @@ simdutf_warn_unused bool validate_ascii(const char *buf, size_t len) noexcept;
  *
  * @param buf the ASCII string to validate.
  * @param len the length of the string in bytes.
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result validate_ascii_with_errors(const char *buf, size_t len) noexcept;
 
@@ -447,7 +505,7 @@ simdutf_warn_unused bool validate_utf8(const char *buf, size_t len) noexcept;
  *
  * @param buf the UTF-8 string to validate.
  * @param len the length of the string in bytes.
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result validate_utf8_with_errors(const char *buf, size_t len) noexcept;
 
@@ -506,7 +564,7 @@ simdutf_warn_unused bool validate_utf16be(const char16_t *buf, size_t len) noexc
  *
  * @param buf the UTF-16 string to validate.
  * @param len the length of the string in number of 2-byte code units (char16_t).
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result validate_utf16_with_errors(const char16_t *buf, size_t len) noexcept;
 
@@ -520,7 +578,7 @@ simdutf_warn_unused result validate_utf16_with_errors(const char16_t *buf, size_
  *
  * @param buf the UTF-16LE string to validate.
  * @param len the length of the string in number of 2-byte code units (char16_t).
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result validate_utf16le_with_errors(const char16_t *buf, size_t len) noexcept;
 
@@ -534,7 +592,7 @@ simdutf_warn_unused result validate_utf16le_with_errors(const char16_t *buf, siz
  *
  * @param buf the UTF-16BE string to validate.
  * @param len the length of the string in number of 2-byte code units (char16_t).
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result validate_utf16be_with_errors(const char16_t *buf, size_t len) noexcept;
 
@@ -560,7 +618,7 @@ simdutf_warn_unused bool validate_utf32(const char32_t *buf, size_t len) noexcep
  *
  * @param buf the UTF-32 string to validate.
  * @param len the length of the string in number of 4-byte code units (char32_t).
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result validate_utf32_with_errors(const char32_t *buf, size_t len) noexcept;
 
@@ -1336,7 +1394,7 @@ We have several transcoding functions returning `simdutf::error` results:
  * @param input         the UTF-8 string to convert
  * @param length        the length of the string in bytes
  * @param latin1_output  the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of code units validated if successful.
  */
 simdutf_warn_unused result convert_utf8_to_latin1_with_errors(const char * input, size_t length, char* latin1_output) noexcept;
 
@@ -1352,7 +1410,7 @@ simdutf_warn_unused result convert_utf8_to_latin1_with_errors(const char * input
  * @param input         the UTF-16LE string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param latin1_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf16le_to_latin1_with_errors(const char16_t * input, size_t length, char* latin1_buffer) noexcept;
 
@@ -1368,7 +1426,7 @@ simdutf_warn_unused result convert_utf16le_to_latin1_with_errors(const char16_t 
  * @param input         the UTF-16BE string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param latin1_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf16be_to_latin1_with_errors(const char16_t * input, size_t length, char* latin1_buffer) noexcept;
 
@@ -1384,7 +1442,7 @@ simdutf_warn_unused result convert_utf16be_to_latin1_with_errors(const char16_t 
  * @param input         the UTF-16 string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param latin1_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf16_to_latin1_with_errors(const char16_t * input, size_t length, char* latin1_buffer) noexcept;
 
@@ -1399,7 +1457,7 @@ simdutf_warn_unused result convert_utf16_to_latin1_with_errors(const char16_t * 
  * @param input         the UTF-8 string to convert
  * @param length        the length of the string in bytes
  * @param utf16_buffer  the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
  */
 simdutf_warn_unused result convert_utf8_to_utf16_with_errors(const char * input, size_t length, char16_t* utf16_output) noexcept;
 
@@ -1412,7 +1470,7 @@ simdutf_warn_unused result convert_utf8_to_utf16_with_errors(const char * input,
  * @param input         the UTF-8 string to convert
  * @param length        the length of the string in bytes
  * @param utf16_buffer  the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
  */
 simdutf_warn_unused result convert_utf8_to_utf16le_with_errors(const char * input, size_t length, char16_t* utf16_output) noexcept;
 
@@ -1425,7 +1483,7 @@ simdutf_warn_unused result convert_utf8_to_utf16le_with_errors(const char * inpu
  * @param input         the UTF-8 string to convert
  * @param length        the length of the string in bytes
  * @param utf16_buffer  the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
  */
 simdutf_warn_unused result convert_utf8_to_utf16be_with_errors(const char * input, size_t length, char16_t* utf16_output) noexcept;
 
@@ -1438,7 +1496,7 @@ simdutf_warn_unused result convert_utf8_to_utf16be_with_errors(const char * inpu
  * @param input         the UTF-8 string to convert
  * @param length        the length of the string in bytes
  * @param utf32_buffer  the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
  */
 simdutf_warn_unused result convert_utf8_to_utf32_with_errors(const char * input, size_t length, char32_t* utf32_output) noexcept;
 
@@ -1454,7 +1512,7 @@ simdutf_warn_unused result convert_utf8_to_utf32_with_errors(const char * input,
  * @param input         the UTF-16LE string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param utf8_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf16le_to_utf8_with_errors(const char16_t * input, size_t length, char* utf8_buffer) noexcept;
 
@@ -1469,7 +1527,7 @@ simdutf_warn_unused result convert_utf16le_to_utf8_with_errors(const char16_t * 
  * @param input         the UTF-16BE string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param utf8_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf16be_to_utf8_with_errors(const char16_t * input, size_t length, char* utf8_buffer) noexcept;
 
@@ -1486,7 +1544,7 @@ simdutf_warn_unused result convert_utf16be_to_utf8_with_errors(const char16_t * 
  * @param input         the UTF-32 string to convert
  * @param length        the length of the string in 4-byte code units (char32_t)
  * @param latin1_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf32_to_latin1_with_errors(const char32_t * input, size_t length, char* latin1_buffer) noexcept;
 
@@ -1502,7 +1560,7 @@ simdutf_warn_unused result convert_utf32_to_latin1_with_errors(const char32_t * 
  * @param input         the UTF-32 string to convert
  * @param length        the length of the string in 4-byte code units (char32_t)
  * @param utf8_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char written if successful.
  */
 simdutf_warn_unused result convert_utf32_to_utf8_with_errors(const char32_t * input, size_t length, char* utf8_buffer) noexcept;
 
@@ -1518,7 +1576,7 @@ simdutf_warn_unused result convert_utf32_to_utf8_with_errors(const char32_t * in
  * @param input         the UTF-32 string to convert
  * @param length        the length of the string in 4-byte code units (char32_t)
  * @param utf16_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
  */
 simdutf_warn_unused result convert_utf32_to_utf16_with_errors(const char32_t * input, size_t length, char16_t* utf16_buffer) noexcept;
 
@@ -1533,7 +1591,7 @@ simdutf_warn_unused result convert_utf32_to_utf16_with_errors(const char32_t * i
  * @param input         the UTF-32 string to convert
  * @param length        the length of the string in 4-byte code units (char32_t)
  * @param utf16_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
  */
 simdutf_warn_unused result convert_utf32_to_utf16le_with_errors(const char32_t * input, size_t length, char16_t* utf16_buffer) noexcept;
 
@@ -1548,7 +1606,7 @@ simdutf_warn_unused result convert_utf32_to_utf16le_with_errors(const char32_t *
  * @param input         the UTF-32 string to convert
  * @param length        the length of the string in 4-byte code units (char32_t)
  * @param utf16_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char16_t written if successful.
  */
 simdutf_warn_unused result convert_utf32_to_utf16be_with_errors(const char32_t * input, size_t length, char16_t* utf16_buffer) noexcept;
 
@@ -1564,7 +1622,7 @@ simdutf_warn_unused result convert_utf32_to_utf16be_with_errors(const char32_t *
  * @param input         the UTF-16 string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param utf32_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
  */
 simdutf_warn_unused result convert_utf16_to_utf32_with_errors(const char16_t * input, size_t length, char32_t* utf32_buffer) noexcept;
 
@@ -1579,7 +1637,7 @@ simdutf_warn_unused result convert_utf16_to_utf32_with_errors(const char16_t * i
  * @param input         the UTF-16LE string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param utf32_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
  */
 simdutf_warn_unused result convert_utf16le_to_utf32_with_errors(const char16_t * input, size_t length, char32_t* utf32_buffer) noexcept;
 
@@ -1594,7 +1652,7 @@ simdutf_warn_unused result convert_utf16le_to_utf32_with_errors(const char16_t *
  * @param input         the UTF-16BE string to convert
  * @param length        the length of the string in 2-byte code units (char16_t)
  * @param utf32_buffer   the pointer to buffer that can hold conversion result
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the error (in the input in code units) if any, or the number of char32_t written if successful.
  */
 simdutf_warn_unused result convert_utf16be_to_utf32_with_errors(const char16_t * input, size_t length, char32_t* utf32_buffer) noexcept;
 
@@ -1622,7 +1680,7 @@ void change_endianness_utf16(const char16_t * input, size_t length, char16_t * o
 Base64
 -----
 
-We also support converting from [WHATWG forgiving-base64](https://infra.spec.whatwg.org/#forgiving-base64-decode) to binary, and back. In particular, you can convert base64 inputs which contain ASCII spaces to binary. We also support the base64 URL encoding alternative. These functions are part of the Node.js JavaScript runtime: in particular `atob` in Node.js relies on simdutf.
+We also support converting from [WHATWG forgiving-base64](https://infra.spec.whatwg.org/#forgiving-base64-decode) to binary, and back. In particular, you can convert base64 inputs which contain ASCII spaces (' ', '\t', '\n', '\r', '\f') to binary. We also support the base64 URL encoding alternative. These functions are part of the Node.js JavaScript runtime: in particular `atob` in Node.js relies on simdutf.
 
 Converting binary data to base64 always succeeds and is relatively simple:
 ```C++
@@ -1631,7 +1689,7 @@ simdutf::binary_to_base64(source.data(), source.size(), buffer.data());
 ```
 
 Decoding base64 requires validation and, thus, error handling. Furthermore, because
-we prune spaces, we may need to adjust the result size afterword.
+we prune ASCII spaces, we may need to adjust the result size afterward.
 
 ```C++
 std::vector<char> buffer(simdutf::maximal_binary_length_from_base64(base64.data(), base64.size()));
@@ -1639,7 +1697,7 @@ simdutf::result r = simdutf::base64_to_binary(base64.data(), base64.size(), buff
 if(r.error) {
   // We have some error, r.count tells you where the error was encountered in the input if
   // the error is INVALID_BASE64_CHARACTER. If the error is BASE64_INPUT_REMAINDER, then
-  // a single valid base64 remained, and r.count contains the number of bytes decoded.
+  // a single valid base64 character remained, and r.count contains the number of bytes decoded.
 } else {
   buffer.resize(r.count); // resize the buffer according to actual number of bytes
 }
@@ -1790,10 +1848,12 @@ We support two conventions: `base64_default` and `base64_url`:
   `simdutf::binary_to_base64(source, size, out, buffer.data())`. When decoding, white space
   characters are omitted as per the [WHATWG forgiving-base64](https://infra.spec.whatwg.org/#forgiving-base64-decode) standard. Further, if padding characters are present at the end of the
   stream, there must be no more than two, and if there are any, the total number of characters (excluding
-  spaces but including padding characters) must be divisible by four.
+  ASCII spaces ' ', '\t', '\n', '\r', '\f' but including padding characters) must be divisible by four.
 * The URL convention (`base64_url`) uses the characters `-` and `_` as part of its alphabet. It does
   not pad its output. Thus, we have that the string `"Hello, World!"` is encoded to `"SGVsbG8sIFdvcmxkIQ"`.
   To specify the URL convention, you can pass the appropriate option to our decoding and encoding functions: e.g., `simdutf::base64_to_binary(source, size, out, simdutf::base64_url)`.
+
+When we encounter a character that is neither an ASCII space nor a base64 character (a garbage character), we detect an error. To tolerate 'garbage' characters, you can use `base64_default_accept_garbage` or `base64_url_accept_garbage` instead of `base64_default` or `base64_url`.
 
 Thus we follow the convention of systems such as the Node or Bun JavaScript runtimes with respect to padding. The
 default base64 uses padding whereas the URL variant does not.
@@ -1816,19 +1876,50 @@ and omit it with the default variant. These users can
 For greater convenience, you may use `simdutf::base64_default_no_padding` and
 `simdutf::base64_url_with_padding`, as shorthands.
 
+When decoding, by default we use a loose approach: the padding character may be omitted.
+Advanced users may use the `last_chunk_options` parameter to use either a strict approach,
+where precise padding must be used or an error is generated, or the stop_before_partial
+option which simply discards leftover base64 characters when the padding is not appropriate.
+The stop_before_partial option might be useful for streaming: given a stream of base64
+characters over the network, you may want to be able to decode them without first waiting
+for the whole stream to come in.
+The strict approach is useful if you want to have one-to-one correspondance between
+the base64 code and the binary data. In the defaut setting is used (`last_chunk_handling_options::loose`),
+then `"ZXhhZg=="`, `"ZXhhZg"`, `"ZXhhZh=="` all decode to the same binary content.
+If `last_chunk_options` is set to `last_chunk_handling_options::strict`, then
+decoding `"ZXhhZg=="` succeeds, but decoding `"ZXhhZg"` fails with `simdutf::error_code::BASE64_INPUT_REMAINDER` while `"ZXhhZh=="` fails with
+`simdutf::error_code::BASE64_EXTRA_BITS`.
+
 The specification of our base64 functions is as follows:
 
 ```C++
 
 // base64_options are used to specify the base64 encoding options.
+// ASCII spaces are ' ', '\t', '\n', '\r', '\f'
+// garbage characters are characters that are not part of the base64 alphabet nor ASCII spaces.
 using base64_options = uint64_t;
-enum : base64_options {
-  base64_default = 0, /* standard base64 format (with padding) */
-  base64_url = 1, /* base64url format (no padding) */
+enum base64_options : uint64_t {
+  base64_default = 0,         /* standard base64 format (with padding) */
+  base64_url = 1,             /* base64url format (no padding) */
   base64_reverse_padding = 2, /* modifier for base64_default and base64_url */
-  base64_default_no_padding = base64_default | base64_reverse_padding, /* standard base64 format without padding */
-  base64_url_with_padding = base64_url | base64_reverse_padding, /* base64url with padding */
+  base64_default_no_padding =
+      base64_default |
+      base64_reverse_padding, /* standard base64 format without padding */
+  base64_url_with_padding =
+      base64_url | base64_reverse_padding, /* base64url with padding */
+  base64_default_accept_garbage = 4,       /* standard base64 format accepting garbage characters */
+  base64_url_accept_garbage = 5,           /* base64url format accepting garbage characters */
 };
+
+// last_chunk_handling_options are used to specify the handling of the last
+// chunk in base64 decoding.
+// https://tc39.es/proposal-arraybuffer-base64/spec/#sec-frombase64
+enum last_chunk_handling_options : uint64_t {
+  loose = 0,               /* standard base64 format, decode partial final chunk */
+  strict = 1,              /* error when the last chunk is partial, 2 or 3 chars, and unpadded, or non-zero bit padding */
+  stop_before_partial = 2, /* if the last chunk is partial (2 or 3 chars), ignore it (no error) */
+};
+
 /**
  * Provide the maximal binary length in bytes given the base64 input.
  * In general, if the input contains ASCII spaces, the result will be less than
@@ -1851,43 +1942,65 @@ simdutf_warn_unused size_t maximal_binary_length_from_base64(const char * input,
  */
 simdutf_warn_unused size_t maximal_binary_length_from_base64(const char16_t * input, size_t length) noexcept;
 
+
 /**
  * Convert a base64 input to a binary output.
  *
- * This function follows the WHATWG forgiving-base64 format, which means that it will
- * ignore any ASCII spaces in the input. You may provide a padded input (with one or two
- * equal signs at the end) or an unpadded input (without any equal signs at the end).
+ * This function follows the WHATWG forgiving-base64 format, which means that it
+ * will ignore any ASCII spaces in the input. You may provide a padded input
+ * (with one or two equal signs at the end) or an unpadded input (without any
+ * equal signs at the end).
  *
  * See https://infra.spec.whatwg.org/#forgiving-base64-decode
  *
- * This function will fail in case of invalid input. There are two possible reasons for
- * failure: the input contains a number of base64 characters that when divided by 4, leaves
- * a single remainder character (BASE64_INPUT_REMAINDER), or the input contains a character
- * that is not a valid base64 character (INVALID_BASE64_CHARACTER).
+ * This function will fail in case of invalid input. When last_chunk_options = loose,
+ * there are two possible reasons for failure: the input contains a number of
+ * base64 characters that when divided by 4, leaves a single remainder character
+ * (BASE64_INPUT_REMAINDER), or the input contains a character that is not a
+ * valid base64 character (INVALID_BASE64_CHARACTER).
  *
- * The INVALID_BASE64_CHARACTER cases are considered fatal and you are expected to discard
- * the output.
+ * When the error is INVALID_BASE64_CHARACTER, r.count contains the index in the
+ * input where the invalid character was found. When the error is
+ * BASE64_INPUT_REMAINDER, then r.count contains the number of bytes decoded.
  *
- * When the error is INVALID_BASE64_CHARACTER, r.count contains the index in the input
- * where the invalid character was found. When the error is BASE64_INPUT_REMAINDER, then
- * r.count contains the number of bytes decoded.
+ * The default option (simdutf::base64_default) expects the characters `+` and
+ * `/` as part of its alphabet. The URL option (simdutf::base64_url) expects the
+ * characters `-` and `_` as part of its alphabet.
  *
- * The default option (simdutf::base64_default) expects the characters `+` and `/` as part of its alphabet.
- * The URL option (simdutf::base64_url) expects the characters `-` and `_` as part of its alphabet.
+ * The padding (`=`) is validated if present. There may be at most two padding
+ * characters at the end of the input. If there are any padding characters, the
+ * total number of characters (excluding spaces but including padding
+ * characters) must be divisible by four.
  *
- * The padding (`=`) is validated if present. There may be at most two padding characters at the end of the input.
- * If there are any padding characters, the total number of characters (excluding spaces but including padding characters) must be divisible by four.
+ * You should call this function with a buffer that is at least
+ * maximal_binary_length_from_base64(input, length) bytes long. If you fail to
+ * provide that much space, the function may cause a buffer overflow.
  *
- * You should call this function with a buffer that is at least maximal_binary_length_from_base64(input, length) bytes long.
- * If you fail to provide that much space, the function may cause a buffer overflow.
+ * Advanced users may want to taylor how the last chunk is handled. By default,
+ * we use a loose (forgiving) approach but we also support a strict approach
+ * as well as a stop_before_partial approach, as per the following proposal:
+ *
+ * https://tc39.es/proposal-arraybuffer-base64/spec/#sec-frombase64
  *
  * @param input         the base64 string to process
  * @param length        the length of the string in bytes
- * @param output        the pointer to buffer that can hold the conversion result (should be at least maximal_binary_length_from_base64(input, length) bytes long).
- * @param options       the base64 options to use, can be base64_default or base64_url, is base64_default by default.
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the error (in the input in bytes) if any, or the number of bytes written if successful.
+ * @param output        the pointer to buffer that can hold the conversion
+ * result (should be at least maximal_binary_length_from_base64(input, length)
+ * bytes long).
+ * @param options       the base64 options to use, usually base64_default or
+ * base64_url, and base64_default by default.
+ * @param last_chunk_options the last chunk handling options,
+ * last_chunk_handling_options::loose by default
+ * but can also be last_chunk_handling_options::strict or
+ * last_chunk_handling_options::stop_before_partial.
+ * @return a result pair struct (of type simdutf::result containing the two
+ * fields error and count) with an error code and either position of the error
+ * (in the input in bytes) if any, or the number of bytes written if successful.
  */
-simdutf_warn_unused result base64_to_binary(const char * input, size_t length, char* output, base64_options options = base64_default) noexcept;
+simdutf_warn_unused result
+base64_to_binary(const char *input, size_t length, char *output,
+                 base64_options options = base64_default,
+                 last_chunk_handling_options last_chunk_options = loose) noexcept;
 
 /**
  * Provide the base64 length in bytes given the length of a binary input.
@@ -1927,67 +2040,103 @@ size_t binary_to_base64(const char * input, size_t length, char* output, base64_
  *
  * See https://infra.spec.whatwg.org/#forgiving-base64-decode
  *
- * This function will fail in case of invalid input. There are two possible reasons for
- * failure: the input contains a number of base64 characters that when divided by 4, leaves
- * a single remainder character (BASE64_INPUT_REMAINDER), or the input contains a character
- * that is not a valid base64 character (INVALID_BASE64_CHARACTER).
+ * This function will fail in case of invalid input. When last_chunk_options = loose,
+ * there are two possible reasons for failure: the input contains a number of
+ * base64 characters that when divided by 4, leaves a single remainder character
+ * (BASE64_INPUT_REMAINDER), or the input contains a character that is not a
+ * valid base64 character (INVALID_BASE64_CHARACTER).
  *
  * When the error is INVALID_BASE64_CHARACTER, r.count contains the index in the input
  * where the invalid character was found. When the error is BASE64_INPUT_REMAINDER, then
  * r.count contains the number of bytes decoded.
  *
- * You should call this function with a buffer that is at least maximal_binary_length_from_utf6_base64(input, length) bytes long.
+ * You should call this function with a buffer that is at least maximal_binary_length_from_base64(input, length) bytes long.
  * If you fail to provide that much space, the function may cause a buffer overflow.
+ *
+ * Advanced users may want to taylor how the last chunk is handled. By default,
+ * we use a loose (forgiving) approach but we also support a strict approach
+ * as well as a stop_before_partial approach, as per the following proposal:
+ *
+ * https://tc39.es/proposal-arraybuffer-base64/spec/#sec-frombase64
  *
  * @param input         the base64 string to process, in ASCII stored as 16-bit units
  * @param length        the length of the string in 16-bit units
  * @param output        the pointer to buffer that can hold the conversion result (should be at least maximal_binary_length_from_base64(input, length) bytes long).
  * @param options       the base64 options to use, can be base64_default or base64_url, is base64_default by default.
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and either position of the INVALID_BASE64_CHARACTER error (in the input in units) if any, or the number of bytes written if successful.
+ * @param last_chunk_options the last chunk handling options,
+ * last_chunk_handling_options::loose by default
+ * but can also be last_chunk_handling_options::strict or
+ * last_chunk_handling_options::stop_before_partial.
+ * @return a result pair struct (of type simdutf::result containing the two fields error and count) with an error code and either position of the INVALID_BASE64_CHARACTER error (in the input in units) if any, or the number of bytes written if successful.
  */
-simdutf_warn_unused result base64_to_binary(const char16_t * input, size_t length, char* output, base64_options options = base64_default)  noexcept;
+simdutf_warn_unused result base64_to_binary(const char16_t * input, size_t length, char* output, base64_options options = base64_default, last_chunk_handling_options last_chunk_options =
+                     last_chunk_handling_options::loose)  noexcept;
 
 /**
  * Convert a base64 input to a binary output.
  *
- * This function follows the WHATWG forgiving-base64 format, which means that it will
- * ignore any ASCII spaces in the input. You may provide a padded input (with one or two
- * equal signs at the end) or an unpadded input (without any equal signs at the end).
+ * This function follows the WHATWG forgiving-base64 format, which means that it
+ * will ignore any ASCII spaces in the input. You may provide a padded input
+ * (with one or two equal signs at the end) or an unpadded input (without any
+ * equal signs at the end).
  *
  * See https://infra.spec.whatwg.org/#forgiving-base64-decode
  *
- * This function will fail in case of invalid input. There are three possible reasons for
- * failure: the input contains a number of base64 characters that when divided by 4, leaves
- * a single remainder character (BASE64_INPUT_REMAINDER), the input contains a character
- * that is not a valid base64 character (INVALID_BASE64_CHARACTER), or the output buffer
- * is too small (OUTPUT_BUFFER_TOO_SMALL).
+ * This function will fail in case of invalid input. When last_chunk_options = loose,
+ * there are three possible reasons for failure: the input contains a number of base64
+ * characters that when divided by 4, leaves a single remainder character
+ * (BASE64_INPUT_REMAINDER), the input contains a character that is not a valid
+ * base64 character (INVALID_BASE64_CHARACTER), or the output buffer is too
+ * small (OUTPUT_BUFFER_TOO_SMALL).
  *
  * When OUTPUT_BUFFER_TOO_SMALL, we return both the number of bytes written
- * and the number of units processed, see description of the parameters and returned value.
+ * and the number of units processed, see description of the parameters and
+ * returned value.
  *
- * When the error is INVALID_BASE64_CHARACTER, r.count contains the index in the input
- * where the invalid character was found. When the error is BASE64_INPUT_REMAINDER, then
- * r.count contains the number of bytes decoded.
+ * When the error is INVALID_BASE64_CHARACTER, r.count contains the index in the
+ * input where the invalid character was found. When the error is
+ * BASE64_INPUT_REMAINDER, then r.count contains the number of bytes decoded.
  *
- * The default option (simdutf::base64_default) expects the characters `+` and `/` as part of its alphabet.
- * The URL option (simdutf::base64_url) expects the characters `-` and `_` as part of its alphabet.
+ * The default option (simdutf::base64_default) expects the characters `+` and
+ * `/` as part of its alphabet. The URL option (simdutf::base64_url) expects the
+ * characters `-` and `_` as part of its alphabet.
  *
- * The padding (`=`) is validated if present. There may be at most two padding characters at the end of the input.
- * If there are any padding characters, the total number of characters (excluding spaces but including padding characters) must be divisible by four.
+ * The padding (`=`) is validated if present. There may be at most two padding
+ * characters at the end of the input. If there are any padding characters, the
+ * total number of characters (excluding spaces but including padding
+ * characters) must be divisible by four.
  *
- * The INVALID_BASE64_CHARACTER cases are considered fatal and you are expected to discard
- * the output.
+ * The INVALID_BASE64_CHARACTER cases are considered fatal and you are expected
+ * to discard the output.
  *
- * @param input         the base64 string to process, in ASCII stored as 8-bit or 16-bit units
+ * Advanced users may want to taylor how the last chunk is handled. By default,
+ * we use a loose (forgiving) approach but we also support a strict approach
+ * as well as a stop_before_partial approach, as per the following proposal:
+ *
+ * https://tc39.es/proposal-arraybuffer-base64/spec/#sec-frombase64
+ *
+ * @param input         the base64 string to process, in ASCII stored as 8-bit
+ * or 16-bit units
  * @param length        the length of the string in 8-bit or 16-bit units.
- * @param output        the pointer to buffer that can hold the conversion result.
- * @param outlen        the number of bytes that can be written in the output buffer. Upon return, it is modified to reflect how many bytes were written.
- * @param options       the base64 options to use, can be base64_default or base64_url, is base64_default by default.
- * @return a result pair struct (of type simdutf::error containing the two fields error and count) with an error code and position of the INVALID_BASE64_CHARACTER error (in the input in units) if any, or the number of units processed if successful.
+ * @param output        the pointer to buffer that can hold the conversion
+ * result.
+ * @param outlen        the number of bytes that can be written in the output
+ * buffer. Upon return, it is modified to reflect how many bytes were written.
+ * @param options       the base64 options to use, can be base64_default or
+ * base64_url, is base64_default by default.
+ * @param last_chunk_options the last chunk handling options,
+ * last_chunk_handling_options::loose by default
+ * but can also be last_chunk_handling_options::strict or
+ * last_chunk_handling_options::stop_before_partial.
+ * @return a result pair struct (of type simdutf::result containing the two
+ * fields error and count) with an error code and position of the
+ * INVALID_BASE64_CHARACTER error (in the input in units) if any, or the number
+ * of units processed if successful.
  */
-simdutf_warn_unused result base64_to_binary_safe(const char * input, size_t length, char* output, size_t& outlen, base64_options options = base64_default) noexcept;
-simdutf_warn_unused result base64_to_binary_safe(const char16_t * input, size_t length, char* output, size_t& outlen, base64_options options = base64_default) noexcept;
-
+simdutf_warn_unused result base64_to_binary_safe(const char * input, size_t length, char* output, size_t& outlen, base64_options options = base64_default,
+      last_chunk_handling_options last_chunk_options = loose) noexcept;
+simdutf_warn_unused result base64_to_binary_safe(const char16_t * input, size_t length, char* output, size_t& outlen, base64_options options = base64_default,
+      last_chunk_handling_options last_chunk_options = loose) noexcept;
 ```
 
 
